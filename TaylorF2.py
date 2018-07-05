@@ -48,7 +48,6 @@ class TaylorF2:
         self.vlogv = np.zeros(1 + PN_PHASING_SERIES_MAX_ORDER)
         self.vlogvsq = np.zeros(1 + PN_PHASING_SERIES_MAX_ORDER)
 
-
         # Non-spin phasing terms - see arXiv:0907.0700, Eq. 3.18 */
         EULER_GAMMA = 0.5772156649015328606065120900824024
         self.v = [1.0
