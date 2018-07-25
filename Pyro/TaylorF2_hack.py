@@ -45,8 +45,8 @@ class TaylorF2 :
         # reserve space for coefficient arrays
         PN_PHASING_SERIES_MAX_ORDER = 12
         #self.v = np.zeros(1 + PN_PHASING_SERIES_MAX_ORDER)
-        self.vlogv = np.zeros(1 + PN_PHASING_SERIES_MAX_ORDER)
-        self.vlogvsq = np.zeros(1 + PN_PHASING_SERIES_MAX_ORDER)
+        self.vlogv = torch.zeros(1 + PN_PHASING_SERIES_MAX_ORDER , dtype = torch.float)
+        self.vlogvsq = torch.zeros(1 + PN_PHASING_SERIES_MAX_ORDER , dtype = torch.float)
 
         # Non-spin phasing terms - see arXiv:0907.0700, Eq. 3.18 */
         EULER_GAMMA = 0.5772156649015328606065120900824024
@@ -62,7 +62,7 @@ class TaylorF2 :
                                - eta*eta*eta * 127825.0/1296.0
                                + (-6848.0/21.0)*np.log(4.0)
                   , np.pi * ( 77096675.0/254016.0 + 378515.0/1512.0 * eta - 74045.0/756.0 * eta*eta) ]
-        self.v = np.array(self.v)
+        self.v = torch.tensor(self.v  , dtype = torch.float)
 
 
         # Compute 2.0PN SS, QM, and self-spin
@@ -95,7 +95,7 @@ class TaylorF2 :
                       , -1.0 * pn_gamma
                       , np.pi * (3760.0*SL + 1490.0*dSigmaL)/3.0 + pn_ss3
                       , (-8980424995.0/762048.0 + 6586595.0*eta/756.0 - 305.0*eta*eta/36.0)*SL - (170978035.0/48384.0 - 2876425.0*eta/672.0 - 4735.0*eta*eta/144.0) * dSigmaL]
-        correction = np.array(correction)
+        correction = torch.tensor(correction , dtype = torch.float)
         self.v = self.v + correction
 
         # multiply all coefficients by pfaN
@@ -105,13 +105,13 @@ class TaylorF2 :
         self.vlogvsq =  self.vlogvsq * pfaN
 
 
-    def only_compute_strain(self):
+    def compute_phasing(self , Mf_array, Mf0):
         """
         Compute PN phasing from stored PN coefficients
         Mf_array: input array of geometric frequencies
         Mf0: reference frequency
         """
-        
+
         n_points = 200
         Mf_max = 1.0/(6**(3.0/2.0) * np.pi) # cut at ISCO
         Mf_array = np.linspace(1e-3, Mf_max, n_points) # Geometric frequency
@@ -147,14 +147,19 @@ class TaylorF2 :
             phasing = phasing + self.v[1] * v
             phasing = phasing + self.v[0]
 
-            phasing = np.divide(phasing , v5)
+            phasing = torch.div(phasing , v5)
             PN_phase.append(phasing)
+        phi = torch.tensor(PN_phase)
 
+        return phi
 
-        phi = np.array(PN_phase)
-
-        strain = (A0 * (Mf_array/Mf0)**(-7.0/6.0) * np.exp(1j * phi))
+    def compute_strain(self, Mf, Mf0, A0):
+        amplitude_bit = (A0 * (Mf/Mf0)**(-7.0/6.0))
+        amplitude_bit = np.array(amplitude_bit)
+        phi = self.compute_phasing(Mf , Mf0)
+        phi = phi.numpy()
+        phase_bit = np.real(np.exp(1j * phi))
+        strain = amplitude_bit * phase_bit
         strain = np.real(strain)
         strain = torch.from_numpy(strain)
-
         return strain

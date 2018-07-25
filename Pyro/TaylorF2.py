@@ -5,6 +5,7 @@
 
 import sampyl as smp
 from sampyl import np
+import torch
 import warnings
 
 
@@ -155,4 +156,3 @@ class TaylorF2:
         phi = self.compute_phasing(Mf, Mf0)
         strain = A0 * (Mf/Mf0)**(-7.0/6.0) * np.exp(1j * phi)
         return strain
-
